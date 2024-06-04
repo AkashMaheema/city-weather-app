@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -7,72 +6,93 @@
     android:background="@drawable/backgound"
     tools:context=".MainActivity">
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="City Weather App"
+        android:gravity="center"
+        android:textSize="32dp"
+        android:layout_marginTop="-100dp"/>
+
+    <TextView
+        android:id="@+id/tv_latitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Latitude: "
+        android:textSize="18sp"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:id="@+id/tv_longitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Longitude: "
+        android:textSize="18sp"
+        android:layout_below="@id/tv_latitude"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:id="@+id/tv_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Address: "
+        android:textSize="18sp"
+        android:layout_below="@id/tv_longitude"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:id="@+id/tv_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current Time: "
+        android:textSize="18sp"
+        android:layout_below="@id/tv_address"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:id="@+id/tv_weather_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Weather Info: "
+        android:textSize="18sp"
+        android:layout_below="@id/et_city_name"
+        android:gravity="center"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="16dp"/>
+
+
     <EditText
-        android:id="@+id/cityNameEditText"
+        android:id="@+id/et_city_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:hint="Enter city name"
-        android:layout_centerInParent="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="50dp" />
+        android:layout_below="@id/tv_time"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="16dp"
+        android:gravity="center"
+        />
 
     <Button
-        android:id="@+id/fetchWeatherButton"
+        android:id="@+id/btn_fetch_weather"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Current_Weather"
-        android:layout_below="@id/cityNameEditText"
+        android:text="Fetch Weather"
+        android:layout_below="@id/tv_weather_info"
+        android:layout_marginTop="30dp"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp" />
+        android:gravity="center"/>
 
-    <TextView
-        android:id="@+id/locationTextView"
+    <Button
+        android:id="@+id/btn_refresh"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/fetchWeatherButton"
-        android:layout_centerHorizontal="true"
+        android:text="Refresh"
+        android:layout_below="@id/btn_fetch_weather"
         android:layout_marginTop="20dp"
-        android:text="Location: " />
-
-    <TextView
-        android:id="@+id/timeTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/locationTextView"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:text="Time: " />
-
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/timeTextView"
-        android:layout_margin="16dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:id="@+id/temperatureTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Temperature: " />
-
-            <TextView
-                android:id="@+id/humidityTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Humidity: " />
-
-            <TextView
-                android:id="@+id/descriptionTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Description: " />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
+        android:gravity="center"/>
 </RelativeLayout>

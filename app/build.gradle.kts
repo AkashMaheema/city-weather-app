@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.volley)
     implementation(libs.google.material)
     implementation(libs.cardview)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

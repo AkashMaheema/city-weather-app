@@ -1,120 +1,218 @@
 package com.example.weathercityapplication;
 
-import androidx.appcompat.app.AppCompatActivity;
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
-import com.example.weathercityapplication.R;
-import org.json.JSONException;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    private EditText cityNameEditText;
-    private TextView locationTextView;
-    private TextView timeTextView;
-    private TextView temperatureTextView;
-    private TextView humidityTextView;
-    private TextView descriptionTextView;
-    private Button fetchWeatherButton;
-
-    private SharedPreferences sharedPreferences;
-
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    private static final String BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
+    private static final String API_KEY = "abc4bf1855a76f72be344e624713f50d";
     private static final String TAG = "MainActivity";
-    private static final String API_KEY = "e3fb247aa2740b901efa952004dc7553";
+    private static final String PREFS_NAME = "WeatherAppPrefs";
+    private static final String LAST_CITY = "LastCity";
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private TextView tvLatitude, tvLongitude, tvAddress, tvTime, tvWeatherInfo;
+    private EditText etCityName;
+    private Button btnRefresh, btnFetchWeather;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        cityNameEditText = findViewById(R.id.cityNameEditText);
-        locationTextView = findViewById(R.id.locationTextView);
-        timeTextView = findViewById(R.id.timeTextView);
-        temperatureTextView = findViewById(R.id.temperatureTextView);
-        humidityTextView = findViewById(R.id.humidityTextView);
-        descriptionTextView = findViewById(R.id.descriptionTextView);
-        fetchWeatherButton = findViewById(R.id.fetchWeatherButton);
+        tvLatitude = findViewById(R.id.tv_latitude);
+        tvLongitude = findViewById(R.id.tv_longitude);
+        tvAddress = findViewById(R.id.tv_address);
+        tvTime = findViewById(R.id.tv_time);
+        tvWeatherInfo = findViewById(R.id.tv_weather_info);
+        etCityName = findViewById(R.id.et_city_name);
+        btnRefresh = findViewById(R.id.btn_refresh);
+        btnFetchWeather = findViewById(R.id.btn_fetch_weather);
 
-        sharedPreferences = getSharedPreferences("WeatherApp", MODE_PRIVATE);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        String lastCity = sharedPreferences.getString("lastCity", "");
+        btnRefresh.setOnClickListener(view -> fetchLocation());
+        btnFetchWeather.setOnClickListener(view -> fetchWeatherByCity());
+
+        loadLastSearchedCity();
+        fetchLocation();
+    }
+
+    private void fetchLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+            return;
+        }
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+                if (location != null) {
+                    double latitude = location.getLatitude();
+                    double longitude = location.getLongitude();
+                    tvLatitude.setText("Latitude: " + latitude);
+                    tvLongitude.setText("Longitude: " + longitude);
+                    reverseGeocode(latitude, longitude);
+                    fetchWeatherData(latitude, longitude);
+                    updateTime();
+                } else {
+                    Log.e(TAG, "Location is null");
+                }
+            }
+        }).addOnFailureListener(e -> Log.e(TAG, "Failed to get location", e));
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void reverseGeocode(double latitude, double longitude) {
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address address = addresses.get(0);
+                tvAddress.setText("Address: " + address.getAddressLine(0));
+            } else {
+                tvAddress.setText("Address: Unable to find address");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            tvAddress.setText("Address: Unable to find address");
+        }
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private void updateTime() {
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+        String currentTime = sdf.format(new Date());
+        tvTime.setText("Current Time: " + currentTime);
+    }
+
+    private void fetchWeatherData(double latitude, double longitude) {
+        String urlString = BASE_URL + "?lat=" + latitude + "&lon=" + longitude + "&appid=" + API_KEY + "&units=metric";
+        new FetchWeatherTask().execute(urlString);
+    }
+
+    private void fetchWeatherByCity() {
+        String cityName = etCityName.getText().toString().trim();
+        if (!cityName.isEmpty()) {
+            saveLastSearchedCity(cityName);
+            String urlString = BASE_URL + "?q=" + cityName + "&appid=" + API_KEY + "&units=metric";
+            new FetchWeatherTask().execute(urlString);
+        }
+    }
+
+    private void saveLastSearchedCity(String cityName) {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(LAST_CITY, cityName);
+        editor.apply();
+    }
+
+    private void loadLastSearchedCity() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String lastCity = sharedPreferences.getString(LAST_CITY, "");
         if (!lastCity.isEmpty()) {
-            cityNameEditText.setText(lastCity);
-            fetchWeatherData(lastCity);
+            etCityName.setText(lastCity);
+        }
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    private class FetchWeatherTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... urls) {
+            StringBuilder result = new StringBuilder();
+            try {
+                URL url = new URL(urls[0]);
+                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+
+                int responseCode = urlConnection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        result.append(line);
+                    }
+                    reader.close();
+                } else {
+                    Log.e(TAG, "HTTP error code: " + responseCode);
+                    return null;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e(TAG, "Error fetching weather data", e);
+                return null;
+            }
+            return result.toString();
         }
 
-        fetchWeatherButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String cityName = cityNameEditText.getText().toString();
-                if (!cityName.isEmpty()) {
-                    fetchWeatherData(cityName);
-                    sharedPreferences.edit().putString("lastCity", cityName).apply();
+        @Override
+        protected void onPostExecute(String result) {
+            if (result != null) {
+                try {
+                    JSONObject jsonObject = new JSONObject(result);
+                    JSONObject main = jsonObject.getJSONObject("main");
+                    JSONArray weatherArray = jsonObject.getJSONArray("weather");
+                    JSONObject weather = weatherArray.getJSONObject(0);
+
+                    String weatherInfo = "Temperature: " + main.getDouble("temp") + "°C\n" +
+                            "Humidity: " + main.getInt("humidity") + "%\n" +
+                            "Description: " + weather.getString("description");
+                    tvWeatherInfo.setText("Weather Info:\n" + weatherInfo);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Log.e(TAG, "Error parsing weather data", e);
+                    tvWeatherInfo.setText("Weather Info: Unable to fetch data");
                 }
+            } else {
+                tvWeatherInfo.setText("Weather Info: Unable to fetch data");
             }
-        });
-
-        displayCurrentTime();
+        }
     }
 
-    private void fetchWeatherData(String cityName) {
-        String url = "http://api.openweathermap.org/data/2.5/weather?q=" + cityName + "&appid=" + API_KEY + "&units=metric";
-
-        RequestQueue queue = Volley.newRequestQueue(this);
-
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        try {
-                            parseJsonResponse(response);
-                        } catch (JSONException e) {
-                            Log.e(TAG, "JSON parsing error: " + e.getMessage());
-                        }
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e(TAG, "Volley error: " + error.getMessage());
-                if (error.networkResponse != null) {
-                    Log.e(TAG, "Error Response code: " + error.networkResponse.statusCode);
-                }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                fetchLocation();
+            } else {
+                Log.e(TAG, "Permission denied");
             }
-        });
-
-        queue.add(jsonObjectRequest);
-    }
-
-    private void parseJsonResponse(JSONObject response) throws JSONException {
-        JSONObject main = response.getJSONObject("main");
-        double temperature = main.getDouble("temp");
-        int humidity = main.getInt("humidity");
-
-        String description = response.getJSONArray("weather").getJSONObject(0).getString("description");
-
-        temperatureTextView.setText("Temperature: " + temperature + "°C");
-        humidityTextView.setText("Humidity: " + humidity + "%");
-        descriptionTextView.setText("Description: " + description);
-
-        String location = response.getString("name") + ", " + response.getJSONObject("sys").getString("country");
-        locationTextView.setText("Location: " + location);
-
-        Log.d(TAG, "Weather data parsed successfully");
-    }
-
-    private void displayCurrentTime() {
-        String currentTime = java.text.DateFormat.getTimeInstance().format(new java.util.Date());
-        timeTextView.setText("Time: " + currentTime);
-    }
+}
+}
 }
