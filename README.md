@@ -17,7 +17,8 @@ A simple Android application to fetch and display current weather information fo
 </ul>
 
 <h2>Screenshots</h2>
-<img src="https://github.com/AkashMaheema/city-weather-app/assets/124072217/7e4dff2e-077a-4790-8670-d5aac30c1990.png">
+<img src="https://github.com/AkashMaheema/city-weather-app/assets/124072217/ca37cc4d-dc37-4568-855c-16403b41fe91.png">
+<img src="https://github.com/AkashMaheema/city-weather-app/assets/124072217/67e7d2c1-58d0-4dc5-882b-5d30bbd312d9.png">
 
 
 
